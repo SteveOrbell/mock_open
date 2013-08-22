@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 
-# Copyright (c) 2013 Ionuț Arțăriși <ionut@artarisi.eu>
+# Copyright (c) 2013 <ionut@artarisi.eu>
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ from mock_open import mock_open
 
 class MockTest(unittest.TestCase):
     def test_open_same_mocked_file_twice(self):
-        with mock_open("test_file", "foo"):
+        with mock_open("test_file", unicode("foo")):
             with open("test_file") as a:
                 with open("test_file") as b:
                     self.assertEqual(a.read(), b.read())

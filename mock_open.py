@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 
-# Copyright (c) 2013 Ionuț Arțăriși <ionut@artarisi.eu>
+# Copyright (c) 2013 <ionut@artarisi.eu>
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,7 @@ def mock_open(filename, contents=None, complain=True):
             mocked_file.start()
         open_files.add(f.name)
         return f
-    mocked_file = mock.patch('builtins.open', mock_file)
+    mocked_file = mock.patch('__builtin__.open', mock_file)
     mocked_file.start()
     try:
         yield
