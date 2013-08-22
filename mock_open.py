@@ -1,5 +1,4 @@
 # The MIT License (MIT)
-
 # Copyright (c) 2013 <ionut@artarisi.eu>
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,27 +18,53 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
-
 from contextlib import contextmanager
-import io
-
+from io import BytesIO as StringIO
 import mock
+
+class ExpectedStringIO(StringIO):
+    def __init__(self, filename, contents):
+        super(ExpectedStringIO, self).__init__(contents)
+        self.filename = filename
+        super(ExpectedStringIO, self).seek(0)
+
+    def write(self, written):
+        expected = super(ExpectedStringIO, self).read(len(written))
+        if (expected != written):
+            raise AssertionError("Unexpected contents for file %s."
+                    "\nExpected:\n%s\nWritten:\n%s\n" %
+                    (self.filename, expected, written))
+
+    def close(self):
+        remains = super(ExpectedStringIO, self).read()
+        if (len(remains) > 0):
+            raise AssertionError("Expected data not written to file %s."
+                    "\nExpected:\n%s\n" %
+                    (self.filename, remains))
+        super(ExpectedStringIO, self).close()
 
 class NotMocked(Exception):
     def __init__(self, filename):
         super(NotMocked, self).__init__(
-            "The file %s was opened, but not mocked." % filename)
+                "The file %s was opened, but not mocked." % filename)
         self.filename = filename
 
 @contextmanager
-def mock_open(filename, contents=None, complain=True):
+def mock_open(filename, contents=None, complain=True, mode='r'):
     """Mock the open() builtin function on a specific filename
 
     Let execution pass through to open() on files different than
-    :filename:. Return a StringIO with :contents: if the file was
-    matched. If the :contents: parameter is not given or if it is None,
-    a StringIO instance simulating an empty file is returned.
+    :filename:.
+
+    A StringIO is returned to represent the file contents.  If mode is 'r'
+    (default) then we expect the file to be opened for reading, and the
+    supplied :contents: are used to prepopulate the returned StringIO.
+    If the :contents: parameter is not given or if it is None, a StringIO
+    instance simulating an empty file is returned.
+
+    If mode is 'w' then we expect the file to be opened for writing, and in
+    this case if :contents: is supplied we raise an AssertionError if the
+    eventual file contents don't match that specified.
 
     If :complain: is True (default), will raise an AssertionError if
     :filename: was not opened in the enclosed block. A NotMocked
@@ -48,13 +73,16 @@ def mock_open(filename, contents=None, complain=True):
 
     """
     open_files = set()
-    def mock_file(*args):
+    def mock_file(*args, **keywords):
         if args[0] == filename:
-            f = io.StringIO(contents)
+            if mode == 'r':
+                f = StringIO(contents)
+            else:
+                f = ExpectedStringIO(filename, contents)
             f.name = filename
         else:
             mocked_file.stop()
-            f = open(*args)
+            f = open(*args, **keywords)
             mocked_file.start()
         open_files.add(f.name)
         return f
